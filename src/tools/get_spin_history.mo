@@ -14,7 +14,7 @@ module {
   public func config() : McpTypes.Tool = {
     name = "get_spin_history";
     title = ?"Spin History";
-    description = ?"View your past spin results including reels, bets, payouts, and seeds for verification.";
+    description = ?"View your past spin results including reels, bets, payouts, jackpot wins, and seeds for verification.";
     payment = null;
     inputSchema = Json.obj([
       ("type", Json.str("object")),
@@ -79,6 +79,7 @@ module {
         switch (Map.get(context.spins, Map.thash, spinId)) {
           case (?spin) {
             let reelDisplay = ToolContext.symbolToText(spin.reels[0]) # " " # ToolContext.symbolToText(spin.reels[1]) # " " # ToolContext.symbolToText(spin.reels[2]);
+            let totalPayout = spin.payout + spin.jackpotWon;
             results := Array.append(results, [Json.obj([
               ("spinId", Json.str(spin.id)),
               ("bet", Json.int(spin.bet)),
@@ -88,8 +89,9 @@ module {
                 Json.str(ToolContext.symbolToName(spin.reels[1])),
                 Json.str(ToolContext.symbolToName(spin.reels[2])),
               ])),
-              ("payout", Json.int(spin.payout)),
+              ("payout", Json.int(totalPayout)),
               ("multiplier", Json.int(spin.multiplier)),
+              ("jackpotWon", Json.int(spin.jackpotWon)),
               ("timestamp", Json.int(spin.timestamp)),
             ])]);
           };

@@ -23,6 +23,7 @@ module ToolContext {
     var totalWagered : Nat;
     var totalWon : Nat;
     var biggestWin : Nat;
+    var peakBalance : Nat; // highest balance ever achieved
     var lastFaucetClaim : Nat; // timestamp nanos
     createdAt : Nat;
   };
@@ -35,8 +36,32 @@ module ToolContext {
     reels : [Symbol];
     payout : Nat;
     multiplier : Nat;
+    jackpotWon : Nat; // progressive jackpot payout (0 if not jackpot)
     seed : Blob;
     timestamp : Nat;
+  };
+
+  // ── Leaderboard record ──
+  public type LeaderboardRecord = {
+    var biggestWinAmount : Nat;
+    var biggestWinPlayer : ?Principal;
+    var biggestWinSpinId : ?Text;
+    var mostSpinsPlayer : ?Principal;
+    var mostSpinsCount : Nat;
+    var highestBalanceEver : Nat;
+    var highestBalancePlayer : ?Principal;
+    var jackpotHitCount : Nat;
+    var totalFreeSpinsAwarded : Nat;
+  };
+
+  // ── Symbol frequency tracker ──
+  public type SymbolFrequency = {
+    var cherry : Nat;
+    var lemon : Nat;
+    var bell : Nat;
+    var star : Nat;
+    var diamond : Nat;
+    var seven : Nat;
   };
 
   // ── Machine stats ──
@@ -45,6 +70,9 @@ module ToolContext {
     var totalWagered : Nat;
     var totalPaidOut : Nat;
     var totalPlayers : Nat;
+    var jackpotPool : Nat; // progressive jackpot pool
+    leaderboard : LeaderboardRecord;
+    symbolFrequency : SymbolFrequency;
   };
 
   // ── Context shared between tools and the main canister ──
@@ -64,7 +92,8 @@ module ToolContext {
   public let MIN_BET : Nat = 1;
   public let MAX_BET : Nat = 100;
   public let FAUCET_AMOUNT : Nat = 100;
-  public let FAUCET_COOLDOWN_NANOS : Nat = 86_400_000_000_000; // 24 hours
+  public let FAUCET_COOLDOWN_NANOS : Nat = 14_400_000_000_000; // 4 hours
+  public let JACKPOT_RAKE_PERCENT : Nat = 2; // 2% of each bet goes to jackpot pool
 
   // ── Symbol helpers ──
   public func symbolToText(s : Symbol) : Text {
@@ -99,7 +128,7 @@ module ToolContext {
     else { #seven };
   };
 
-  // Determine payout multiplier from 3 reels
+  // Determine payout multiplier from 3 reels (v0.2.0 rebalanced)
   public func getMultiplier(reels : [Symbol]) : Nat {
     assert reels.size() == 3;
     let r0 = reels[0];
@@ -109,12 +138,12 @@ module ToolContext {
     // Three of a kind
     if (symbolsEqual(r0, r1) and symbolsEqual(r1, r2)) {
       switch (r0) {
-        case (#seven) { 100 };
-        case (#diamond) { 50 };
-        case (#star) { 25 };
-        case (#bell) { 10 };
-        case (#lemon) { 5 };
-        case (#cherry) { 3 };
+        case (#seven) { 150 };   // was 100
+        case (#diamond) { 50 };  // unchanged
+        case (#star) { 25 };     // unchanged
+        case (#bell) { 12 };     // was 10
+        case (#lemon) { 7 };     // was 5
+        case (#cherry) { 5 };    // was 3
       };
     }
     // Any pair
@@ -127,6 +156,22 @@ module ToolContext {
     };
   };
 
+  // Get the pair symbol when exactly 2 match (for near-miss messages)
+  public func getPairSymbol(reels : [Symbol]) : ?Symbol {
+    let r0 = reels[0];
+    let r1 = reels[1];
+    let r2 = reels[2];
+
+    // Don't return for triples
+    if (symbolsEqual(r0, r1) and symbolsEqual(r1, r2)) {
+      return null;
+    };
+    if (symbolsEqual(r0, r1)) { return ?r0 };
+    if (symbolsEqual(r1, r2)) { return ?r1 };
+    if (symbolsEqual(r0, r2)) { return ?r0 };
+    null;
+  };
+
   public func symbolsEqual(a : Symbol, b : Symbol) : Bool {
     switch (a, b) {
       case (#cherry, #cherry) { true };
@@ -136,6 +181,18 @@ module ToolContext {
       case (#diamond, #diamond) { true };
       case (#seven, #seven) { true };
       case _ { false };
+    };
+  };
+
+  // Track symbol frequency
+  public func trackSymbol(freq : SymbolFrequency, s : Symbol) {
+    switch (s) {
+      case (#cherry) { freq.cherry += 1 };
+      case (#lemon) { freq.lemon += 1 };
+      case (#bell) { freq.bell += 1 };
+      case (#star) { freq.star += 1 };
+      case (#diamond) { freq.diamond += 1 };
+      case (#seven) { freq.seven += 1 };
     };
   };
 

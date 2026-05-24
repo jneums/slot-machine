@@ -39,6 +39,7 @@ module {
         ("derivedReels", Json.obj([("type", Json.str("string")), ("description", Json.str("Reels re-derived from seed — should match recordedReels"))])),
         ("payout", Json.obj([("type", Json.str("integer"))])),
         ("multiplier", Json.obj([("type", Json.str("integer"))])),
+        ("jackpotWon", Json.obj([("type", Json.str("integer")), ("description", Json.str("Progressive jackpot payout (0 if not jackpot)"))])),
         ("verified", Json.obj([("type", Json.str("boolean"))])),
         ("algorithm", Json.obj([("type", Json.str("string")), ("description", Json.str("Description of the seed-to-reel mapping algorithm"))])),
       ])),
@@ -103,7 +104,9 @@ module {
       let payoutMatch = derivedMultiplier == spin.multiplier;
       let verified = reelsMatch and payoutMatch;
 
-      let algorithm = "For each of 3 reels: take 4 bytes from seed (reel 0: bytes 0-3, reel 1: bytes 4-7, reel 2: bytes 8-11), convert to Nat32 big-endian, mod 100. Map: 0-24=cherry, 25-49=lemon, 50-69=bell, 70-84=star, 85-94=diamond, 95-99=seven. Seed source: ICP raw_rand() (subnet threshold BLS).";
+      let algorithm = "For each of 3 reels: take 4 bytes from seed (reel 0: bytes 0-3, reel 1: bytes 4-7, reel 2: bytes 8-11), convert to Nat32 big-endian, mod 100. Map: 0-24=cherry, 25-49=lemon, 50-69=bell, 70-84=star, 85-94=diamond, 95-99=seven. Payouts: cherry=5x, lemon=7x, bell=12x, star=25x, diamond=50x, seven=150x+jackpot, pair=1x. Seed source: ICP raw_rand() (subnet threshold BLS).";
+
+      let totalPayout = spin.payout + spin.jackpotWon;
 
       ToolContext.makeSuccess(Json.obj([
         ("spinId", Json.str(spin.id)),
@@ -112,8 +115,9 @@ module {
         ("seed", Json.str(blobToHex(spin.seed))),
         ("recordedReels", Json.str(reelsToDisplay(spin.reels))),
         ("derivedReels", Json.str(reelsToDisplay(derivedReels))),
-        ("payout", Json.int(spin.payout)),
+        ("payout", Json.int(totalPayout)),
         ("multiplier", Json.int(spin.multiplier)),
+        ("jackpotWon", Json.int(spin.jackpotWon)),
         ("verified", Json.bool(verified)),
         ("algorithm", Json.str(algorithm)),
       ]), cb);

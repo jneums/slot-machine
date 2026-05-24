@@ -3,6 +3,8 @@ import AuthTypes "mo:mcp-motoko-sdk/auth/Types";
 import Result "mo:base/Result";
 import Json "mo:json";
 import Nat "mo:base/Nat";
+import Principal "mo:base/Principal";
+import Option "mo:base/Option";
 
 import ToolContext "ToolContext";
 
@@ -11,7 +13,7 @@ module {
   public func config() : McpTypes.Tool = {
     name = "get_machine_stats";
     title = ?"Machine Statistics";
-    description = ?"View global slot machine statistics including total spins, payouts, player count, and the full payout table. Public — no authentication required.";
+    description = ?"View global slot machine statistics including total spins, payouts, player count, progressive jackpot pool, leaderboard records, symbol frequency distribution, and the full payout table. Public — no authentication required.";
     payment = null;
     inputSchema = Json.obj([
       ("type", Json.str("object")),
@@ -25,9 +27,25 @@ module {
         ("totalPaidOut", Json.obj([("type", Json.str("integer"))])),
         ("totalPlayers", Json.obj([("type", Json.str("integer"))])),
         ("houseProfit", Json.obj([("type", Json.str("integer"))])),
+        ("jackpotPool", Json.obj([("type", Json.str("integer")), ("description", Json.str("Current progressive jackpot pool"))])),
+        ("actualHouseEdge", Json.obj([("type", Json.str("string")), ("description", Json.str("Actual house edge from real play data"))])),
+        ("theoreticalHouseEdge", Json.obj([("type", Json.str("string"))])),
+        ("records", Json.obj([("type", Json.str("object"))])),
+        ("symbolFrequency", Json.obj([("type", Json.str("object"))])),
         ("payoutTable", Json.obj([("type", Json.str("array")), ("items", Json.obj([("type", Json.str("object"))]))])),
       ])),
     ]);
+  };
+
+  func principalToText(p : ?Principal) : Text {
+    switch (p) {
+      case (?principal) { Principal.toText(principal) };
+      case (null) { "none" };
+    };
+  };
+
+  func optTextOrNone(t : ?Text) : Text {
+    Option.get(t, "none");
   };
 
   public func handle(context : ToolContext.ToolContext) : (
@@ -38,16 +56,74 @@ module {
     func(_args : McpTypes.JsonValue, _auth : ?AuthTypes.AuthInfo, cb : (Result.Result<McpTypes.CallToolResult, McpTypes.HandlerError>) -> ()) : async () {
 
       let stats = context.machineStats;
+      let lb = stats.leaderboard;
+      let freq = stats.symbolFrequency;
 
       let houseProfitInt : Int = stats.totalWagered - stats.totalPaidOut;
-      let houseProfit : Json.Json = Json.int(houseProfitInt);
+
+      // Calculate actual house edge from real data
+      let actualHouseEdge = if (stats.totalWagered > 0) {
+        let profitAbs = if (houseProfitInt >= 0) { stats.totalWagered - stats.totalPaidOut } else { 0 };
+        let edgePct = (profitAbs * 10000) / stats.totalWagered; // basis points
+        let whole = edgePct / 100;
+        let frac = edgePct % 100;
+        let fracStr = if (frac < 10) { "0" # Nat.toText(frac) } else { Nat.toText(frac) };
+        if (houseProfitInt < 0) {
+          "-" # Nat.toText(whole) # "." # fracStr # "%";
+        } else {
+          Nat.toText(whole) # "." # fracStr # "%";
+        };
+      } else {
+        "N/A (no spins yet)";
+      };
+
+      // Total symbols tracked
+      let totalSymbols = freq.cherry + freq.lemon + freq.bell + freq.star + freq.diamond + freq.seven;
+
+      let symbolFrequencyJson = if (totalSymbols > 0) {
+        Json.obj([
+          ("totalSymbolsTracked", Json.int(totalSymbols)),
+          ("cherry", Json.obj([
+            ("count", Json.int(freq.cherry)),
+            ("actual", Json.str(Nat.toText((freq.cherry * 1000) / totalSymbols) # "‰")),
+            ("expected", Json.str("250‰")),
+          ])),
+          ("lemon", Json.obj([
+            ("count", Json.int(freq.lemon)),
+            ("actual", Json.str(Nat.toText((freq.lemon * 1000) / totalSymbols) # "‰")),
+            ("expected", Json.str("250‰")),
+          ])),
+          ("bell", Json.obj([
+            ("count", Json.int(freq.bell)),
+            ("actual", Json.str(Nat.toText((freq.bell * 1000) / totalSymbols) # "‰")),
+            ("expected", Json.str("200‰")),
+          ])),
+          ("star", Json.obj([
+            ("count", Json.int(freq.star)),
+            ("actual", Json.str(Nat.toText((freq.star * 1000) / totalSymbols) # "‰")),
+            ("expected", Json.str("150‰")),
+          ])),
+          ("diamond", Json.obj([
+            ("count", Json.int(freq.diamond)),
+            ("actual", Json.str(Nat.toText((freq.diamond * 1000) / totalSymbols) # "‰")),
+            ("expected", Json.str("100‰")),
+          ])),
+          ("seven", Json.obj([
+            ("count", Json.int(freq.seven)),
+            ("actual", Json.str(Nat.toText((freq.seven * 1000) / totalSymbols) # "‰")),
+            ("expected", Json.str("50‰")),
+          ])),
+        ]);
+      } else {
+        Json.obj([("message", Json.str("No spins yet — frequency data unavailable"))]);
+      };
 
       let payoutTable = Json.arr([
         Json.obj([
           ("combo", Json.str("🎰🎰🎰")),
           ("name", Json.str("Three Sevens")),
-          ("multiplier", Json.str("100x")),
-          ("description", Json.str("JACKPOT!")),
+          ("multiplier", Json.str("150x + jackpot pool")),
+          ("description", Json.str("JACKPOT! Wins the progressive jackpot pool too!")),
         ]),
         Json.obj([
           ("combo", Json.str("💎💎💎")),
@@ -64,19 +140,19 @@ module {
         Json.obj([
           ("combo", Json.str("🔔🔔🔔")),
           ("name", Json.str("Three Bells")),
-          ("multiplier", Json.str("10x")),
+          ("multiplier", Json.str("12x")),
           ("description", Json.str("Bell Ringer")),
         ]),
         Json.obj([
           ("combo", Json.str("🍋🍋🍋")),
           ("name", Json.str("Three Lemons")),
-          ("multiplier", Json.str("5x")),
+          ("multiplier", Json.str("7x")),
           ("description", Json.str("Lemon Squeeze")),
         ]),
         Json.obj([
           ("combo", Json.str("🍒🍒🍒")),
           ("name", Json.str("Three Cherries")),
-          ("multiplier", Json.str("3x")),
+          ("multiplier", Json.str("5x")),
           ("description", Json.str("Cherry Bomb")),
         ]),
         Json.obj([
@@ -102,17 +178,37 @@ module {
         Json.obj([("symbol", Json.str("🎰 Seven")), ("weight", Json.str("5%"))]),
       ]);
 
+      let records = Json.obj([
+        ("biggestWinAmount", Json.int(lb.biggestWinAmount)),
+        ("biggestWinPlayer", Json.str(principalToText(lb.biggestWinPlayer))),
+        ("biggestWinSpinId", Json.str(optTextOrNone(lb.biggestWinSpinId))),
+        ("mostSpinsPlayer", Json.str(principalToText(lb.mostSpinsPlayer))),
+        ("mostSpinsCount", Json.int(lb.mostSpinsCount)),
+        ("highestBalanceEver", Json.int(lb.highestBalanceEver)),
+        ("highestBalancePlayer", Json.str(principalToText(lb.highestBalancePlayer))),
+        ("jackpotHitCount", Json.int(lb.jackpotHitCount)),
+      ]);
+
       ToolContext.makeSuccess(Json.obj([
         ("totalSpins", Json.int(stats.totalSpins)),
         ("totalWagered", Json.int(stats.totalWagered)),
         ("totalPaidOut", Json.int(stats.totalPaidOut)),
         ("totalPlayers", Json.int(stats.totalPlayers)),
-        ("houseProfit", houseProfit),
+        ("houseProfit", Json.int(houseProfitInt)),
+        ("jackpotPool", Json.int(stats.jackpotPool)),
+        ("actualHouseEdge", Json.str(actualHouseEdge)),
+        ("theoreticalHouseEdge", Json.str("9.46%")),
         ("betRange", Json.obj([
           ("min", Json.int(ToolContext.MIN_BET)),
           ("max", Json.int(ToolContext.MAX_BET)),
         ])),
-        ("faucetAmount", Json.int(ToolContext.FAUCET_AMOUNT)),
+        ("faucet", Json.obj([
+          ("amount", Json.int(ToolContext.FAUCET_AMOUNT)),
+          ("cooldownHours", Json.int(4)),
+        ])),
+        ("jackpotRake", Json.str("2% of each bet")),
+        ("records", records),
+        ("symbolFrequency", symbolFrequencyJson),
         ("payoutTable", payoutTable),
         ("symbolWeights", symbolWeights),
         ("randomnessSource", Json.str("ICP raw_rand() — subnet threshold BLS signature, cryptographically random and verifiable")),

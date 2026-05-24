@@ -34,6 +34,7 @@ import Spin "tools/spin";
 import GetBalance "tools/get_balance";
 import GetSpinHistory "tools/get_spin_history";
 import GetMachineStats "tools/get_machine_stats";
+import GetLeaderboard "tools/get_leaderboard";
 import VerifySpin "tools/verify_spin";
 
 shared ({ caller = deployer }) persistent actor class McpServer(
@@ -65,6 +66,26 @@ shared ({ caller = deployer }) persistent actor class McpServer(
     var totalWagered = 0;
     var totalPaidOut = 0;
     var totalPlayers = 0;
+    var jackpotPool = 0;
+    leaderboard = {
+      var biggestWinAmount = 0;
+      var biggestWinPlayer = null;
+      var biggestWinSpinId = null;
+      var mostSpinsPlayer = null;
+      var mostSpinsCount = 0;
+      var highestBalanceEver = 0;
+      var highestBalancePlayer = null;
+      var jackpotHitCount = 0;
+      var totalFreeSpinsAwarded = 0;
+    };
+    symbolFrequency = {
+      var cherry = 0;
+      var lemon = 0;
+      var bell = 0;
+      var star = 0;
+      var diamond = 0;
+      var seven = 0;
+    };
   };
 
   // ── Random number generation via management canister ──
@@ -139,6 +160,7 @@ shared ({ caller = deployer }) persistent actor class McpServer(
     GetBalance.config(),
     GetSpinHistory.config(),
     GetMachineStats.config(),
+    GetLeaderboard.config(),
     ClaimFaucet.config(),
     VerifySpin.config(),
   ];
@@ -150,7 +172,7 @@ shared ({ caller = deployer }) persistent actor class McpServer(
     serverInfo = {
       name = "slot-machine";
       title = "Slot Machine";
-      version = "0.1.0";
+      version = "0.2.0";
     };
     resources = [];
     resourceReader = func(uri) {
@@ -162,6 +184,7 @@ shared ({ caller = deployer }) persistent actor class McpServer(
       ("get_balance", GetBalance.handle(toolContext)),
       ("get_spin_history", GetSpinHistory.handle(toolContext)),
       ("get_machine_stats", GetMachineStats.handle(toolContext)),
+      ("get_leaderboard", GetLeaderboard.handle(toolContext)),
       ("claim_faucet", ClaimFaucet.handle(toolContext)),
       ("verify_spin", VerifySpin.handle(toolContext)),
     ];

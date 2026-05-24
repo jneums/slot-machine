@@ -14,7 +14,7 @@ module {
   public func config() : McpTypes.Tool = {
     name = "claim_faucet";
     title = ?"Credit Faucet";
-    description = ?"Claim free credits to play the slot machine. Grants 100 credits, available once every 24 hours. Creates your account on first claim.";
+    description = ?"Claim free credits to play the slot machine. Grants 100 credits, available once every 4 hours. Creates your account on first claim.";
     payment = null;
     inputSchema = Json.obj([
       ("type", Json.str("object")),
@@ -33,7 +33,7 @@ module {
         ])),
         ("nextClaimAt", Json.obj([
           ("type", Json.str("string")),
-          ("description", Json.str("When you can next claim (ISO timestamp or 'now')")),
+          ("description", Json.str("When you can next claim (timestamp nanos or 'now')")),
         ])),
         ("message", Json.obj([
           ("type", Json.str("string")),
@@ -72,13 +72,18 @@ module {
               ("balance", Json.int(account.balance)),
               ("claimed", Json.int(0)),
               ("nextClaimAt", Json.str(Nat.toText(nextClaimAt))),
-              ("message", Json.str("RATE_LIMITED: You already claimed today. Next claim available in " # Nat.toText(remainingHours) # "h " # Nat.toText(remainingMins) # "m.")),
+              ("message", Json.str("RATE_LIMITED: You already claimed recently. Next claim available in " # Nat.toText(remainingHours) # "h " # Nat.toText(remainingMins) # "m.")),
             ]), cb);
           };
 
           // Claim
           account.balance += ToolContext.FAUCET_AMOUNT;
           account.lastFaucetClaim := now;
+
+          // Track peak balance
+          if (account.balance > account.peakBalance) {
+            account.peakBalance := account.balance;
+          };
 
           ToolContext.makeSuccess(Json.obj([
             ("balance", Json.int(account.balance)),
@@ -95,6 +100,7 @@ module {
             var totalWagered = 0;
             var totalWon = 0;
             var biggestWin = 0;
+            var peakBalance = ToolContext.FAUCET_AMOUNT;
             var lastFaucetClaim = now;
             createdAt = now;
           };

@@ -12,7 +12,7 @@ module {
   public func config() : McpTypes.Tool = {
     name = "get_balance";
     title = ?"Check Balance";
-    description = ?"Check your current credit balance and lifetime statistics.";
+    description = ?"Check your current credit balance, lifetime statistics, and personal records.";
     payment = null;
     inputSchema = Json.obj([
       ("type", Json.str("object")),
@@ -26,7 +26,9 @@ module {
         ("totalWagered", Json.obj([("type", Json.str("integer"))])),
         ("totalWon", Json.obj([("type", Json.str("integer"))])),
         ("biggestWin", Json.obj([("type", Json.str("integer"))])),
+        ("peakBalance", Json.obj([("type", Json.str("integer")), ("description", Json.str("Highest balance ever achieved"))])),
         ("netProfit", Json.obj([("type", Json.str("integer")), ("description", Json.str("Total won minus total wagered"))])),
+        ("winRate", Json.obj([("type", Json.str("string")), ("description", Json.str("Percentage of spins that paid out"))])),
       ])),
     ]);
   };
@@ -50,9 +52,22 @@ module {
         };
       };
 
-      // Calculate net profit (can be negative, but Nat can't be negative, so handle with two fields)
       let netProfit : Int = account.totalWon - account.totalWagered;
-      let netProfitDisplay : Json.Json = Json.int(netProfit);
+
+      // Calculate win rate from spin history
+      let winRateStr = if (account.totalSpins > 0) {
+        // Count wins from spin history
+        let totalWins = account.totalWon;
+        let totalWagered = account.totalWagered;
+        if (totalWagered > 0) {
+          let returnPct = (account.totalWon * 100) / account.totalWagered;
+          Nat.toText(returnPct) # "% return";
+        } else {
+          "N/A";
+        };
+      } else {
+        "No spins yet";
+      };
 
       ToolContext.makeSuccess(Json.obj([
         ("balance", Json.int(account.balance)),
@@ -60,7 +75,9 @@ module {
         ("totalWagered", Json.int(account.totalWagered)),
         ("totalWon", Json.int(account.totalWon)),
         ("biggestWin", Json.int(account.biggestWin)),
-        ("netProfit", netProfitDisplay),
+        ("peakBalance", Json.int(account.peakBalance)),
+        ("netProfit", Json.int(netProfit)),
+        ("winRate", Json.str(winRateStr)),
       ]), cb);
     };
   };
