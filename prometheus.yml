@@ -1,0 +1,32 @@
+name: slot-machine
+namespace: io.github.jneums.slot-machine
+title: Slot Machine
+version: 0.1.0
+description: A provably fair on-chain slot machine powered by ICP's native subnet randomness. Every spin is verifiable.
+category: Gaming
+mcp_path: /mcp
+repo_url: https://github.com/jneums/slot-machine
+payment: null
+tags: [slots, gambling, provably-fair, on-chain, randomness, gaming]
+submission:
+  name: Slot Machine
+  description: A provably fair on-chain slot machine powered by ICP's native subnet randomness. Every spin is verifiable.
+  publisher: jneums
+  category: Gaming
+  deployment_type: global
+  repo_url: https://github.com/jneums/slot-machine
+  mcp_path: /mcp
+  why_this_app: The first provably fair on-chain slot machine with an MCP interface. Every spin uses ICP raw_rand() for cryptographic randomness — no external oracles, no trust required. Agents can spin, verify fairness, and track stats all through natural language.
+  key_features:
+    - Provably fair — every spin uses ICP raw_rand() subnet threshold BLS randomness
+    - 3-reel, 6-symbol weighted slot machine with configurable bets
+    - On-chain spin history and fairness verification
+    - Daily credit faucet for free play
+    - Global machine statistics and payout table
+    - V2-ready for ICRC token deposits
+  tags: [slots, gambling, provably-fair, on-chain, randomness, gaming]
+  visuals:
+    icon_url: https://github.com/jneums/slot-machine/releases/download/v0.1.0-assets/icon-slot-machine.webp
+    banner_url: https://github.com/jneums/slot-machine/releases/download/v0.1.0-assets/banner-slot-machine.webp
+    gallery_images:
+      - https://github.com/jneums/slot-machine/releases/download/v0.1.0-assets/banner-slot-machine.webp
