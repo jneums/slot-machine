@@ -2,7 +2,7 @@ name: slot-machine
 namespace: io.github.jneums.slot-machine
 title: Slot Machine
 version: 0.2.0
-description: A provably fair on-chain slot machine with progressive jackpot, leaderboard, and near-miss mechanics — powered by ICP's native subnet randomness. House edge 9.5%, every spin verifiable.
+description: A provably fair on-chain slot machine powered by ICP's native subnet randomness. Spin the reels, chase the progressive jackpot, climb the leaderboard — every outcome is cryptographically verifiable.
 category: Gaming
 mcp_path: /mcp
 repo_url: https://github.com/jneums/slot-machine
@@ -10,22 +10,21 @@ payment: null
 tags: [slots, gambling, provably-fair, on-chain, randomness, gaming, jackpot, leaderboard]
 submission:
   name: Slot Machine
-  description: A provably fair on-chain slot machine with progressive jackpot, leaderboard, and near-miss mechanics — powered by ICP's native subnet randomness. House edge 9.5%, every spin verifiable.
+  description: A provably fair on-chain slot machine powered by ICP's native subnet randomness. Spin the reels, chase the progressive jackpot, climb the leaderboard — every outcome is cryptographically verifiable.
   publisher: jneums
   category: Gaming
   deployment_type: global
   repo_url: https://github.com/jneums/slot-machine
   mcp_path: /mcp
-  why_this_app: The first provably fair on-chain slot machine with an MCP interface. Features a progressive jackpot pool, competitive leaderboard, near-miss dopamine, and a fair 9.5% house edge. Every spin uses ICP raw_rand() for cryptographic randomness — no external oracles, no trust required.
+  why_this_app: A fully on-chain slot machine where every spin is provably fair. ICP's raw_rand() provides cryptographic randomness with no external oracles — just spin, verify, and trust the math. A progressive jackpot pool grows with every bet, and a competitive leaderboard tracks the biggest wins across all players.
   key_features:
     - Provably fair — every spin uses ICP raw_rand() subnet threshold BLS randomness
-    - Progressive jackpot — 2% of each bet feeds the pool, three 🎰s win it all
+    - Progressive jackpot — a portion of each bet feeds the pool, and three 🎰s win it all
     - Competitive leaderboard — biggest wins, most spins, highest balance, most wagered
-    - Near-miss messages — emotional feedback on close calls adds dopamine texture
-    - Rebalanced 9.5% house edge — sessions last longer, feel more rewarding
-    - Symbol frequency transparency — actual vs expected distribution from real spins
-    - 4-hour faucet cooldown — more play sessions per day
-    - V2-ready for ICRC token deposits
+    - Free credit faucet — claim credits every 4 hours, no wallet required
+    - Full transparency — symbol frequency distribution, actual house edge, and payout table are all public
+    - Fairness verification — replay any spin's outcome from its stored seed
+    - On-chain everything — balances, history, stats, and randomness all live in canister state
   tags: [slots, gambling, provably-fair, on-chain, randomness, gaming, jackpot, leaderboard]
   visuals:
     icon_url: https://github.com/jneums/slot-machine/releases/download/v0.1.0-assets/icon-slot-machine.webp
